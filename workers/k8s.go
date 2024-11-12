@@ -108,7 +108,7 @@ func (s *K8SWorker) sendUpsert(kind string, id string, value opslevel.JSON) {
 	v := opslevel.PayloadVariables{
 		"kind":        kind,
 		"id":          id,
-		"integration": opslevel.NewIdentifier(s.integration),
+		"integration": *opslevel.NewIdentifier(s.integration),
 		"value":       value,
 	}
 	err := s.client.Mutate(&m, v, opslevel.WithName("IntegrationSourceObjectUpsert"))
@@ -126,7 +126,7 @@ func (s *K8SWorker) sendDelete(kind string, id string) {
 	v := opslevel.PayloadVariables{
 		"kind":        kind,
 		"id":          id,
-		"integration": opslevel.NewIdentifier(s.integration),
+		"integration": *opslevel.NewIdentifier(s.integration),
 	}
 	log.Info().Msgf("%v", v)
 	err := s.client.Mutate(&m, v, opslevel.WithName("IntegrationSourceObjectDelete"))
