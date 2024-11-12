@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/spf13/viper"
 	"sync"
 	"time"
 
@@ -21,16 +22,10 @@ type K8SWorker struct {
 	integration string
 }
 
-func NewK8SWorker(cluster string, integration string, client *opslevel.Client) *K8SWorker {
+func NewK8SWorker(cluster string, integration string, selectors []k8s.K8SSelector, client *opslevel.Client) *K8SWorker {
 	return &K8SWorker{
-		client: client,
-		selectors: []k8s.K8SSelector{
-			{
-				ApiVersion: "apps/v1",
-				Kind:       "Deployment",
-				Namespaces: []string{"staging"},
-			},
-		},
+		client:      client,
+		selectors:   selectors,
 		cluster:     cluster,
 		integration: integration,
 	}
@@ -111,9 +106,13 @@ func (s *K8SWorker) sendUpsert(kind string, id string, value opslevel.JSON) {
 		"integration": *opslevel.NewIdentifier(s.integration),
 		"value":       value,
 	}
-	err := s.client.Mutate(&m, v, opslevel.WithName("IntegrationSourceObjectUpsert"))
-	if err != nil {
-		log.Error().Err(err).Msgf("error during upsert mutate")
+	if viper.GetBool("dry-run") {
+		log.Info().Msgf("[DRYRUN] UPSERT %s | %s | %#v", kind, id, value)
+	} else {
+		err := s.client.Mutate(&m, v, opslevel.WithName("IntegrationSourceObjectUpsert"))
+		if err != nil {
+			log.Error().Err(err).Msgf("error during upsert mutate")
+		}
 	}
 }
 
@@ -128,9 +127,12 @@ func (s *K8SWorker) sendDelete(kind string, id string) {
 		"id":          id,
 		"integration": *opslevel.NewIdentifier(s.integration),
 	}
-	log.Info().Msgf("%v", v)
-	err := s.client.Mutate(&m, v, opslevel.WithName("IntegrationSourceObjectDelete"))
-	if err != nil {
-		log.Error().Err(err).Msgf("error during delete mutate")
+	if viper.GetBool("dry-run") {
+		log.Info().Msgf("[DRYRUN] DELETE %s | %s ", kind, id)
+	} else {
+		err := s.client.Mutate(&m, v, opslevel.WithName("IntegrationSourceObjectDelete"))
+		if err != nil {
+			log.Error().Err(err).Msgf("error during delete mutate")
+		}
 	}
 }

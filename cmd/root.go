@@ -3,6 +3,9 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"gopkg.in/yaml.v3"
+	"k8s.io/utils/path"
+	"opslevel-agent/config"
 	"os"
 	"runtime"
 	"strings"
@@ -31,10 +34,15 @@ var rootCmd = &cobra.Command{
 	Short: "",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
+		cluster := viper.GetString("cluster")
+		integration := viper.GetString("integration")
+		configuration, err := LoadConfig()
+		cobra.CheckErr(err)
 		ctx := signal.Init(context.Background())
+
 		var wg sync.WaitGroup
 		// go workers.NewWebhookWorker().Run(ctx, &wg)
-		go workers.NewK8SWorker(viper.GetString("cluster"), viper.GetString("integration"), newClient()).Run(ctx, &wg)
+		go workers.NewK8SWorker(cluster, integration, configuration.Selectors, newClient()).Run(ctx, &wg)
 		time.Sleep(1 * time.Second)
 		wg.Wait()
 	},
@@ -52,8 +60,11 @@ func Execute(version, commit, date string) {
 }
 
 func init() {
-	rootCmd.PersistentFlags().String("log-format", "TEXT", "overrides environment variable 'OPSLEVEL_LOG_FORMAT' (options [\"JSON\", \"TEXT\"])")
-	rootCmd.PersistentFlags().String("log-level", "INFO", "overrides environment variable 'OPSLEVEL_LOG_LEVEL' (options [\"ERROR\", \"WARN\", \"INFO\", \"DEBUG\"])")
+	rootCmd.PersistentFlags().StringP("config", "c", "./config.yaml", "The configuration file to read in - if not found a default is used. Overrides environment variable 'OPSLEVEL_CONFIG_PATH")
+	rootCmd.PersistentFlags().Bool("dry-run", false, "If true, no mutative actions will be taken.")
+	rootCmd.PersistentFlags().Bool("extended", false, "If true, uses the extended default configuration.")
+	rootCmd.PersistentFlags().String("log-format", "TEXT", "Overrides environment variable 'OPSLEVEL_LOG_FORMAT' (options [\"JSON\", \"TEXT\"])")
+	rootCmd.PersistentFlags().String("log-level", "INFO", "Overrides environment variable 'OPSLEVEL_LOG_LEVEL' (options [\"ERROR\", \"WARN\", \"INFO\", \"DEBUG\"])")
 	rootCmd.PersistentFlags().String("api-token", "", "The OpsLevel API Token. Overrides environment variable 'OPSLEVEL_API_TOKEN'")
 	rootCmd.PersistentFlags().String("api-url", "https://app.opslevel.com/", "The OpsLevel API Url. Overrides environment variable 'OPSLEVEL_API_URL'")
 	rootCmd.PersistentFlags().Int("api-timeout", 40, "The OpsLevel API timeout in seconds. Overrides environment variable 'OPSLEVEL_API_TIMEOUT'")
@@ -62,6 +73,7 @@ func init() {
 	rootCmd.PersistentFlags().String("cluster", "dev", "The name of the cluster the agent is deployed in.")
 
 	cobra.CheckErr(viper.BindPFlags(rootCmd.PersistentFlags()))
+	cobra.CheckErr(viper.BindEnv("config", "OPSLEVEL_CONFIG_PATH"))
 	cobra.CheckErr(viper.BindEnv("api-url", "OPSLEVEL_API_URL"))
 	cobra.CheckErr(viper.BindEnv("api-token", "OPSLEVEL_API_TOKEN"))
 	cobra.CheckErr(viper.BindEnv("api-timeout", "OPSLEVEL_API_TIMEOUT"))
@@ -112,6 +124,29 @@ func setupConcurrency() {
 	if concurrency <= 0 {
 		concurrency = runtime.GOMAXPROCS(0)
 	}
+}
+
+func LoadConfig() (*config.Configuration, error) {
+	filepath := viper.GetString("config")
+	ok, err := path.Exists(path.CheckFollowSymlink, filepath)
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
+		if viper.GetBool("extended") {
+			return config.ExtendedConfiguration, nil
+		}
+		return config.DefaultConfiguration, nil
+	}
+	data, err := os.ReadFile(filepath)
+	if err != nil {
+		return nil, err
+	}
+	var output config.Configuration
+	if err := yaml.Unmarshal(data, &output); err != nil {
+		return nil, err
+	}
+	return &output, nil
 }
 
 func newClient() *opslevel.Client {
