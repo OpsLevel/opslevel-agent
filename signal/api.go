@@ -2,10 +2,11 @@ package signal
 
 import (
 	"context"
-	"github.com/rs/zerolog/log"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/rs/zerolog/log"
 )
 
 func Init(parent context.Context) context.Context {

@@ -4,13 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sync"
+	"time"
+
 	"github.com/opslevel/opslevel-go/v2024"
 	k8s "github.com/opslevel/opslevel-k8s-controller/v2024"
 	"github.com/rs/zerolog/log"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"opslevel-agent/controller"
-	"sync"
-	"time"
 )
 
 type K8SWorker struct {

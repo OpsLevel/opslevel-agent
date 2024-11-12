@@ -2,12 +2,13 @@ package controller
 
 import (
 	"context"
+	"time"
+
 	k8s "github.com/opslevel/opslevel-k8s-controller/v2024"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/dynamic/dynamicinformer"
 	"k8s.io/client-go/tools/cache"
-	"time"
 )
 
 type Operation string

@@ -3,6 +3,12 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"os"
+	"runtime"
+	"strings"
+	"sync"
+	"time"
+
 	"github.com/opslevel/opslevel-go/v2024"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -11,11 +17,6 @@ import (
 	"go.uber.org/automaxprocs/maxprocs"
 	"opslevel-agent/signal"
 	"opslevel-agent/workers"
-	"os"
-	"runtime"
-	"strings"
-	"sync"
-	"time"
 )
 
 var (
@@ -32,7 +33,7 @@ var rootCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx := signal.Init(context.Background())
 		var wg sync.WaitGroup
-		//go workers.NewWebhookWorker().Run(ctx, &wg)
+		// go workers.NewWebhookWorker().Run(ctx, &wg)
 		go workers.NewK8SWorker(viper.GetString("cluster"), viper.GetString("integration"), newClient()).Run(ctx, &wg)
 		time.Sleep(1 * time.Second)
 		wg.Wait()
