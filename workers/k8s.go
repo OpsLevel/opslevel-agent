@@ -3,55 +3,46 @@ package workers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/opslevel/opslevel-go/v2024"
 	k8s "github.com/opslevel/opslevel-k8s-controller/v2024"
 	"github.com/rs/zerolog/log"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"opslevel-agent/controller"
 	"sync"
 	"time"
 )
 
-type K8SOperation string
-
-const (
-	K8SCreate K8SOperation = "create"
-	K8SUpdate K8SOperation = "update"
-	K8SDelete K8SOperation = "delete"
-)
-
-type K8SEvent struct {
-	Op           K8SOperation
-	ExternalType string
-	ExternalID   string
-	Data         opslevel.JSON
-}
-
 type K8SWorker struct {
-	// TODO: Cluster Name
-	selectors []k8s.K8SSelector
+	client      *opslevel.Client
+	selectors   []k8s.K8SSelector
+	cluster     string
+	integration string
 }
 
-func NewK8SWorker() *K8SWorker {
+func NewK8SWorker(cluster string, integration string, client *opslevel.Client) *K8SWorker {
 	return &K8SWorker{
+		client: client,
 		selectors: []k8s.K8SSelector{
 			{
 				ApiVersion: "apps/v1",
 				Kind:       "Deployment",
-				Namespaces: []string{"default"},
+				Namespaces: []string{"staging"},
 			},
 		},
+		cluster:     cluster,
+		integration: integration,
 	}
 }
 
 func (s *K8SWorker) Run(ctx context.Context, wg *sync.WaitGroup) {
-	queue := make(chan K8SEvent)
 	for _, selector := range s.selectors {
-		s.producer(ctx, wg, selector, queue)
+		go s.producer(ctx, wg, selector)
 	}
-	go s.consumer(ctx, wg, queue)
 }
 
-func (s *K8SWorker) producer(ctx context.Context, wg *sync.WaitGroup, selector k8s.K8SSelector, queue chan<- K8SEvent) {
-	controller, err := k8s.NewK8SController(selector, 24*time.Hour)
+func (s *K8SWorker) producer(ctx context.Context, wg *sync.WaitGroup, selector k8s.K8SSelector) {
+	controller, err := controller.New(selector, 24*time.Hour)
 	if err != nil {
 		log.Error().Err(err).
 			Str("api", selector.ApiVersion).
@@ -59,49 +50,86 @@ func (s *K8SWorker) producer(ctx context.Context, wg *sync.WaitGroup, selector k
 			Msgf("failed to start k8s controller")
 		return
 	}
-	controller.OnAdd = parser(K8SCreate, queue)
-	controller.OnUpdate = parser(K8SUpdate, queue)
-	controller.OnDelete = parser(K8SDelete, queue)
+	controller.OnAdd = s.parser(true)
+	controller.OnUpdate = s.parser(true)
+	controller.OnDelete = s.parser(false)
 	wg.Add(1)
-	controller.Start(ctx, wg)
+	controller.Run(ctx)
+	wg.Done()
 }
 
-func (s *K8SWorker) consumer(ctx context.Context, wg *sync.WaitGroup, queue <-chan K8SEvent) {
-	wg.Add(1)
-	log.Info().Msgf("starting consumer")
-	//client := opslevel.NewGQLClient()
-	for {
-		select {
-		case <-ctx.Done():
-			log.Info().Msgf("stopping consumer")
-			wg.Done()
-			return
-		case r := <-queue:
-			log.Info().Msgf("HERE !!! %v", r.Data.ToJSON())
+func (s *K8SWorker) parser(update bool) func(*unstructured.Unstructured) {
+	return func(item *unstructured.Unstructured) {
+		gvr := item.GroupVersionKind()
+		kind := fmt.Sprintf("%s/%s/%s", gvr.Group, gvr.Version, gvr.Kind)
+		id := fmt.Sprintf("%s/%s/%s", s.cluster, item.GetNamespace(), item.GetUID())
+
+		if update {
+			value, err := s.funcName(item)
+			if err != nil {
+				log.Error().Err(err).Msgf("failed to convert k8s resource")
+				return
+			}
+			s.sendUpsert(kind, id, value)
+		} else {
+			s.sendDelete(kind, id)
 		}
 	}
 }
 
-func parser(op K8SOperation, queue chan<- K8SEvent) func(any) {
-	return func(item any) {
-		// TODO: convert to a k8s Metadata
-		// TODO: parse out the API Group and Kind into ExternalType
-		// TODO: parse out the Name, Namespace and Cluster into ExternalID
-		data, err := json.Marshal(item)
-		if err != nil {
-			log.Error().Err(err).Msgf("failed to marshal k8s resource")
-			return
-		}
-		j, err := opslevel.NewJSON(string(data))
-		if err != nil {
-			log.Error().Err(err).Msgf("failed to create opslevel JSON")
-			return
-		}
-		queue <- K8SEvent{
-			Op:           op,
-			ExternalType: "apps/v1/Deployment",
-			ExternalID:   "dev/opslevel/web",
-			Data:         *j,
-		}
+func (s *K8SWorker) funcName(item *unstructured.Unstructured) (opslevel.JSON, error) {
+	// TODO: Cleanup Data Based on known types - Deployment, Statefulset, Daemonset
+	unstructured.RemoveNestedField(item.Object, "metadata", "managedFields")
+	unstructured.RemoveNestedField(item.Object, "spec")
+	unstructured.RemoveNestedField(item.Object, "status", "conditions")
+	return s.toJson(item.Object["status"])
+}
+
+func (s *K8SWorker) toJson(item any) (opslevel.JSON, error) {
+	b, err := json.Marshal(item)
+	if err != nil {
+		return nil, err
+	}
+	var data opslevel.JSON
+	if err = json.Unmarshal(b, &data); err != nil {
+		return nil, err
+	}
+
+	return data, nil
+}
+
+func (s *K8SWorker) sendUpsert(kind string, id string, value opslevel.JSON) {
+	var m struct {
+		Payload struct {
+			Errors []opslevel.OpsLevelErrors
+		} `graphql:"integrationSourceObjectUpsert(externalId: $id, externalKind: $kind, integration: $integration, value: $value)"`
+	}
+	v := opslevel.PayloadVariables{
+		"kind":        kind,
+		"id":          id,
+		"integration": opslevel.NewIdentifier(s.integration),
+		"value":       value,
+	}
+	err := s.client.Mutate(&m, v, opslevel.WithName("IntegrationSourceObjectUpsert"))
+	if err != nil {
+		log.Error().Err(err).Msgf("error during upsert mutate")
+	}
+}
+
+func (s *K8SWorker) sendDelete(kind string, id string) {
+	var m struct {
+		Payload struct {
+			Errors []opslevel.OpsLevelErrors
+		} `graphql:"integrationSourceObjectDelete(externalId: $id, externalKind: $kind, integration: $integration)"`
+	}
+	v := opslevel.PayloadVariables{
+		"kind":        kind,
+		"id":          id,
+		"integration": opslevel.NewIdentifier(s.integration),
+	}
+	log.Info().Msgf("%v", v)
+	err := s.client.Mutate(&m, v, opslevel.WithName("IntegrationSourceObjectDelete"))
+	if err != nil {
+		log.Error().Err(err).Msgf("error during delete mutate")
 	}
 }

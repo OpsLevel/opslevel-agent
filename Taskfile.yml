@@ -2,6 +2,95 @@
 version: '3'
 
 tasks:
+
+  setup:
+    desc: Setup linter, formatter, etc. for local testing and CI
+    cmds:
+      - task: brew-install-go
+      - task: brew-install-jq
+      - task: install-changie
+      - task: install-gofumpt
+      - task: install-golangci-lint
+
+  lint:
+    desc: Formatting and linting
+    cmds:
+      - test -z "$(gofumpt -d -e . | tee /dev/stderr)"
+      - golangci-lint run --timeout 5m
+
+  fix:
+    desc: Fix formatting and linting
+    cmds:
+      - gofumpt -w .
+      - go mod tidy
+      - golangci-lint run --timeout 5m --fix
+
+  test:
+    desc: Run tests
+    dir: "{{.SRC_DIR}}"
+    cmds:
+      - go test -race -coverprofile=coverage.txt -covermode=atomic -v ./... {{ .CLI_ARGS }}
+    silent: true
+
   run:
     cmds:
-      - go run main.go
+      - go run main.go {{ .CLI_ARGS }}
+
+  brew-install-go:
+    internal: false
+    platforms: [darwin]
+    cmds: ["which go > /dev/null || brew install go"]
+    preconditions:
+      - sh: 'which brew'
+        msg: '"brew" needed to install "go"- see https://brew.sh'
+
+  brew-install-jq:
+    internal: false
+    platforms: [darwin]
+    cmds: ["which jq > /dev/null || brew install jq"]
+    preconditions:
+      - sh: 'which brew'
+        msg: '"brew" needed to install "jq"- see https://brew.sh'
+
+  go-install-tool:
+    desc: go install '{{.GO_TOOL}}' and set GOBIN if not set
+    internal: true
+    silent: true
+    vars:
+      IS_TOOL_INSTALLED:
+        sh: which {{.GO_TOOL}} > /dev/null || echo "1"
+    cmds:
+      - test -z "{{.IS_TOOL_INSTALLED}}" || echo "Installing {{.GO_TOOL}}..."
+      - test -z "{{.IS_TOOL_INSTALLED}}" || go install {{.GO_TOOL_PATH}}
+      - test -n $(go env GOBIN) || go env -w GOBIN=$(go env GOPATH)/bin
+      - echo "  '{{.GO_TOOL}}' is installed."
+    requires:
+      vars: [GO_TOOL, GO_TOOL_PATH]
+
+  install-changie:
+    desc: go install "changie"
+    internal: true
+    cmds:
+      - task: go-install-tool
+        vars: { GO_TOOL: "changie", GO_TOOL_PATH: "github.com/miniscruff/changie@latest" }
+
+  install-delve:
+    desc: go install "dlv"
+    internal: true
+    cmds:
+      - task: go-install-tool
+        vars: { GO_TOOL: "dlv", GO_TOOL_PATH: "github.com/go-delve/delve/cmd/dlv@latest" }
+
+  install-gofumpt:
+    desc: go install "gofumpt"
+    internal: true
+    cmds:
+      - task: go-install-tool
+        vars: { GO_TOOL: "gofumpt", GO_TOOL_PATH: "mvdan.cc/gofumpt@latest" }
+
+  install-golangci-lint:
+    desc: go install "golangci-lint"
+    internal: true
+    cmds:
+      - task: go-install-tool
+        vars: { GO_TOOL: "golangci-lint", GO_TOOL_PATH: "github.com/golangci/golangci-lint/cmd/golangci-lint@latest" }
