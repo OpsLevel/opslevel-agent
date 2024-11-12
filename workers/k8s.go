@@ -81,9 +81,9 @@ func (s *K8SWorker) parser(update bool) func(*unstructured.Unstructured) {
 func (s *K8SWorker) funcName(item *unstructured.Unstructured) (opslevel.JSON, error) {
 	// TODO: Cleanup Data Based on known types - Deployment, Statefulset, Daemonset
 	unstructured.RemoveNestedField(item.Object, "metadata", "managedFields")
-	unstructured.RemoveNestedField(item.Object, "spec")
-	unstructured.RemoveNestedField(item.Object, "status", "conditions")
-	return s.toJson(item.Object["status"])
+	//unstructured.RemoveNestedField(item.Object, "spec")
+	//unstructured.RemoveNestedField(item.Object, "status", "conditions")
+	return s.toJson(item)
 }
 
 func (s *K8SWorker) toJson(item any) (opslevel.JSON, error) {
