@@ -40,7 +40,7 @@ var (
 				Excludes:   []string{".metadata.namespace == \"kube-system\""},
 			},
 			{
-				ApiVersion: "v1",
+				ApiVersion: "apiregistration.k8s.io/v1",
 				Kind:       "APIService",
 				Excludes:   []string{".metadata.namespace == \"kube-system\""},
 			},

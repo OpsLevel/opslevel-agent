@@ -3,8 +3,9 @@ package workers
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"github.com/spf13/viper"
+	"slices"
+	"strings"
 	"sync"
 	"time"
 
@@ -57,8 +58,19 @@ func (s *K8SWorker) producer(ctx context.Context, wg *sync.WaitGroup, selector k
 func (s *K8SWorker) parser(update bool) func(*unstructured.Unstructured) {
 	return func(item *unstructured.Unstructured) {
 		gvr := item.GroupVersionKind()
-		kind := fmt.Sprintf("%s/%s/%s", gvr.Group, gvr.Version, gvr.Kind)
-		id := fmt.Sprintf("%s/%s/%s", s.cluster, item.GetNamespace(), item.GetUID())
+		// I'm sorry to whomever future person reads this code because of a bug and hates me for this
+		kind := strings.Join(
+			slices.DeleteFunc(
+				[]string{gvr.Group, gvr.Version, gvr.Kind},
+				func(s string) bool { return s == "" },
+			),
+			"/")
+		id := strings.Join(
+			slices.DeleteFunc(
+				[]string{s.cluster, item.GetNamespace(), string(item.GetUID())},
+				func(s string) bool { return s == "" },
+			),
+			"/")
 
 		if update {
 			value, err := s.funcName(item)
