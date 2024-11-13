@@ -121,6 +121,7 @@ func (s *K8SWorker) sendUpsert(kind string, id string, value opslevel.JSON) {
 	if viper.GetBool("dry-run") {
 		log.Info().Msgf("[DRYRUN] UPSERT %s | %s | %#v", kind, id, value)
 	} else {
+		log.Info().Msgf("UPSERT %s | %s", kind, id)
 		err := s.client.Mutate(&m, v, opslevel.WithName("IntegrationSourceObjectUpsert"))
 		if err != nil {
 			log.Error().Err(err).Msgf("error during upsert mutate")
@@ -142,6 +143,7 @@ func (s *K8SWorker) sendDelete(kind string, id string) {
 	if viper.GetBool("dry-run") {
 		log.Info().Msgf("[DRYRUN] DELETE %s | %s ", kind, id)
 	} else {
+		log.Info().Msgf("DELETE %s | %s ", kind, id)
 		err := s.client.Mutate(&m, v, opslevel.WithName("IntegrationSourceObjectDelete"))
 		if err != nil {
 			log.Error().Err(err).Msgf("error during delete mutate")
