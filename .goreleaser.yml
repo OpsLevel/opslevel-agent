@@ -47,9 +47,9 @@ brews:
     dependencies:
       - name: go
     install: |
-      bin.install "opslevel-runner"
+      bin.install "opslevel-agent"
     test: |
-      system "#{bin}/opslevel-runner version"
+      system "#{bin}/opslevel-agent version"
     repository:
       owner: OpsLevel
       name: homebrew-tap
