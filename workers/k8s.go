@@ -3,11 +3,12 @@ package workers
 import (
 	"context"
 	"encoding/json"
-	"github.com/spf13/viper"
 	"slices"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/spf13/viper"
 
 	"github.com/opslevel/opslevel-go/v2024"
 	k8s "github.com/opslevel/opslevel-k8s-controller/v2024"
@@ -88,8 +89,8 @@ func (s *K8SWorker) parser(update bool) func(*unstructured.Unstructured) {
 func (s *K8SWorker) funcName(item *unstructured.Unstructured) (opslevel.JSON, error) {
 	// TODO: Cleanup Data Based on known types - Deployment, Statefulset, Daemonset
 	unstructured.RemoveNestedField(item.Object, "metadata", "managedFields")
-	//unstructured.RemoveNestedField(item.Object, "spec")
-	//unstructured.RemoveNestedField(item.Object, "status", "conditions")
+	// unstructured.RemoveNestedField(item.Object, "spec")
+	// unstructured.RemoveNestedField(item.Object, "status", "conditions")
 	return s.toJson(item)
 }
 

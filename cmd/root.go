@@ -3,14 +3,15 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"gopkg.in/yaml.v3"
-	"k8s.io/utils/path"
-	"opslevel-agent/config"
 	"os"
 	"runtime"
 	"strings"
 	"sync"
 	"time"
+
+	"gopkg.in/yaml.v3"
+	"k8s.io/utils/path"
+	"opslevel-agent/config"
 
 	"github.com/opslevel/opslevel-go/v2024"
 	"github.com/rs/zerolog"
