@@ -1,0 +1,20 @@
+name: "Reports"
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: "0 13 * * 1"  # 8am CT on Mondays
+
+jobs:
+  call-grype:
+    uses: opslevel/actions/.github/workflows/grype.yml@main
+    with:
+      alias: opslevel-agent
+    secrets: inherit
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Report Coverage To OpsLevel
+        run: |-
+          export DATA=$(curl -s -X GET -H "Authorization: ${CODECOV_TOKEN}" https://codecov.io/api/gh/${GITHUB_REPOSITORY}/branch/main)
+          echo ${DATA} | curl -s -X POST ${{ secrets.OL_COVERAGE_INTEGRATION_URL }} -H 'content-type: application/json' -d @-

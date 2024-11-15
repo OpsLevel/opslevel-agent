@@ -32,6 +32,13 @@ tasks:
       - go test -race -coverprofile=coverage.txt -covermode=atomic -v ./... {{ .CLI_ARGS }}
     silent: true
 
+  ci:
+    desc: Workflow to run in CI
+    deps: [setup]
+    cmds:
+      - task: lint
+      - task: test
+
   run:
     cmds:
       - go run main.go {{ .CLI_ARGS }}

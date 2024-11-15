@@ -1,0 +1,28 @@
+changesDir: .changes
+unreleasedDir: unreleased
+headerPath: header.tpl.md
+changelogPath: CHANGELOG.md
+versionExt: md
+versionFormat: '## [{{.Time.Format "January 02, 2006"}}](https://github.com/OpsLevel/opslevel-agent/compare/{{.PreviousVersion}}...{{.Version}})'
+kindFormat: '### {{.Kind}}'
+changeFormat: '* {{.Body}}'
+kinds:
+- label: Fixed
+  auto: patch
+- label: Added
+  auto: minor
+- label: Refactor
+  auto: major
+- label: Deprecated
+  auto: minor
+- label: Removed
+  auto: major
+- label: Security
+  auto: patch
+- label: Dependency
+  auto: patch
+newlines:
+  afterChangelogHeader: 1
+  beforeChangelogVersion: 1
+  endOfVersion: 1
+envPrefix: CHANGIE_
