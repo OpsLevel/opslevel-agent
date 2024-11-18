@@ -10,8 +10,26 @@ permissions:
   contents: write
 
 jobs:
-  release:
+  release-version:
     runs-on: ubuntu-latest
+    outputs:
+      release_version: ${{ steps.version.outputs.RELEASE_VERSION }}
+    steps:
+      - name: Set Release Version
+        id: version
+        run: |
+          echo "RELEASE_VERSION=$(date +v%Y.%-m.%-d)" >> $GITHUB_OUTPUT
+      - name: Ensure Release Does Not Exist
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release delete $RELEASE_VERSION || true
+
+  release:
+    runs-on: macos-latest
+    needs: [release-version]
+    env:
+      RELEASE_VERSION: ${{ needs.release-version.outputs.release_version }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -21,10 +39,6 @@ jobs:
           token: ${{ secrets.ORG_GITHUB_TOKEN }}
       - name: Fetch All Tags
         run: git fetch --force --tags
-      - name: Set Release Version
-        id: version
-        run: |
-          echo "RELEASE_VERSION=$(date +v%Y.%-m.%-d)" >> $GITHUB_OUTPUT
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
@@ -56,32 +70,32 @@ jobs:
         run: |
           git config user.name "OpsLevel Bots"
           git config user.email "bots@opslevel.com"
-          if test -f ./.changes/${{ steps.version.outputs.RELEASE_VERSION }}.md
+          if test -f ./.changes/$RELEASE_VERSION.md
           then
             echo "Skip Changie..."
           else
             go install github.com/miniscruff/changie@latest
-            changie batch ${{ steps.version.outputs.RELEASE_VERSION }}
+            changie batch $RELEASE_VERSION
             changie merge
             git add .
-            git commit -m "Cut Release '${{ steps.version.outputs.RELEASE_VERSION }}'"
+            git commit -m "Cut Release '$RELEASE_VERSION'"
             git push origin HEAD
           fi
-          git tag -f ${{ steps.version.outputs.RELEASE_VERSION }} -m "Cut Release '${{ steps.version.outputs.RELEASE_VERSION }}'"
-          git push -f origin refs/tags/${{ steps.version.outputs.RELEASE_VERSION }}
-      - name: Ensure Release Does Not Exist
-        env:
-          GITHUB_TOKEN: ${{ secrets.ORG_GITHUB_TOKEN }}
-        run: |
-          gh release delete ${{ steps.version.outputs.RELEASE_VERSION }} || true
+          git tag -f $RELEASE_VERSION -m "Cut Release '$RELEASE_VERSION'"
+          git push -f origin refs/tags/$RELEASE_VERSION
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6.1.0
         with:
-          args: release --clean --release-notes=../.changes/${{ steps.version.outputs.RELEASE_VERSION }}.md
+          args: release --clean --release-notes=../.changes/${{ needs.release-version.outputs.release_version }}.md
         env:
           GPG_FINGERPRINT: ${{ steps.import_gpg.outputs.fingerprint }}
           GITHUB_TOKEN: ${{ secrets.ORG_GITHUB_TOKEN }}
           ORG_GITHUB_TOKEN: ${{ secrets.ORG_GITHUB_TOKEN }}
+
+  report-release:
+    needs: [release]
+    runs-on: ubuntu-latest
+    steps:
       - name: Report Release To OpsLevel
         uses: opslevel/report-deploy-github-action@v1.0.0
         with:
