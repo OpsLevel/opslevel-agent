@@ -78,7 +78,6 @@ jobs:
         uses: goreleaser/goreleaser-action@v6.1.0
         with:
           args: release --clean --release-notes=../.changes/${{ steps.version.outputs.RELEASE_VERSION }}.md
-          workdir: ./src
         env:
           GPG_FINGERPRINT: ${{ steps.import_gpg.outputs.fingerprint }}
           GITHUB_TOKEN: ${{ secrets.ORG_GITHUB_TOKEN }}
