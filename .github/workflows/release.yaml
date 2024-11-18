@@ -26,7 +26,7 @@ jobs:
           gh release delete $RELEASE_VERSION || true
 
   release:
-    runs-on: macos-latest
+    runs-on: macos-latest-large
     needs: [release-version]
     env:
       RELEASE_VERSION: ${{ needs.release-version.outputs.release_version }}
