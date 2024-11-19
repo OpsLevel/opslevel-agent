@@ -5,20 +5,18 @@ before:
     - go mod tidy
 builds:
   - env:
-      - CGO_ENABLED=1
-      - CGO_CFLAGS="-I/opt/homebrew/include"
-      - CGO_LDFLAGS="-L/opt/homebrew/lib"
+      - CGO_ENABLED=0
     mod_timestamp: '{{ .CommitTimestamp }}'
     flags:
       - -trimpath
     goos:
-#      - linux
+      - linux
       - darwin
     goarch:
       - amd64
-#      - '386'
-#      - arm
-#      - arm64
+      - '386'
+      - arm
+      - arm64
     ignore:
       - goos: darwin
         goarch: '386'
