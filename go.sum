@@ -20,8 +20,6 @@ github.com/evanphx/json-patch v4.12.0+incompatible h1:4onqiflcdA9EOZ4RxV643DvftH
 github.com/evanphx/json-patch v4.12.0+incompatible/go.mod h1:50XU6AFN0ol/bzJsmQLiYLvXMP4fmwYFNcr97nuDLSk=
 github.com/fatih/color v1.16.0 h1:zmkK9Ngbjj+K0yRhTVONQh1p/HknKYSlNT+vZCzyokM=
 github.com/fatih/color v1.16.0/go.mod h1:fL2Sau1YI5c0pdGEVCbKQbLXB6edEj1ZgiY4NijnWvE=
-github.com/flant/libjq-go v1.6.2 h1:uWEVFKyepRxwA/zH6O8bcb67Kcun+XkioOk4n5TyGQg=
-github.com/flant/libjq-go v1.6.2/go.mod h1:f+REaGl/+pZR97rbTcwHEka/MAipoQQ2Mc0iQUj4ak0=
 github.com/frankban/quicktest v1.14.6 h1:7Xjx+VpznH+oBnejlPUj8oUpdxnVs4f8XU8WnHkI4W8=
 github.com/frankban/quicktest v1.14.6/go.mod h1:4ptaffx2x8+WTWXmUCuVU6aPUX1/Mz7zb5vbUoiM6w0=
 github.com/fsnotify/fsnotify v1.7.0 h1:8JEhPFa5W2WU7YfeZzPNqzMP6Lwt7L2715Ggo0nosvA=
@@ -131,10 +129,6 @@ github.com/opslevel/moredefaults v0.0.0-20240529152742-17d1318a3c12 h1:OQZ3W8kby
 github.com/opslevel/moredefaults v0.0.0-20240529152742-17d1318a3c12/go.mod h1:g2GSXVP6LO+5+AIsnMRPN+BeV86OXuFRTX7HXCDtYeI=
 github.com/opslevel/opslevel-go/v2024 v2024.11.8 h1:m7MgIfvdeiofFOZ4xY43nPXZN/20RgSPi6Z7q9iyOMM=
 github.com/opslevel/opslevel-go/v2024 v2024.11.8/go.mod h1:34kLE/rM0i+alFg52micZnkYA7T63xfD/LaigQHldrk=
-github.com/opslevel/opslevel-jq-parser/v2024 v2024.9.3 h1:CLgzoTIwYQyEz4+NAyxhSyz+CqOyXhlGN3OHufTn03I=
-github.com/opslevel/opslevel-jq-parser/v2024 v2024.9.3/go.mod h1:sU5njk9RkXWGTDnrYMt3oZ6YNgAKuWl8HTGqvapsd5k=
-github.com/opslevel/opslevel-k8s-controller/v2024 v2024.9.3 h1:UxiG6RCklC+IvIDFJsZ2tZVWnUyKourS6yoJhd2rIsk=
-github.com/opslevel/opslevel-k8s-controller/v2024 v2024.9.3/go.mod h1:ARon6gPSfQq44vj2T7nzSfdyAlP+OhthcjratbcTF50=
 github.com/pelletier/go-toml/v2 v2.2.2 h1:aYUidT7k73Pcl9nb2gScu7NSrKCSHIDE89b3+6Wq+LM=
 github.com/pelletier/go-toml/v2 v2.2.2/go.mod h1:1t835xjRzz80PqgE6HHgN2JOsmgYu/h4qDAS4n929Rs=
 github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=

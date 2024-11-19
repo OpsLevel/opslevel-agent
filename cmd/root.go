@@ -143,6 +143,7 @@ func LoadConfig() (*config.Configuration, error) {
 	if err != nil {
 		return nil, err
 	}
+	log.Info().Msgf("%s | %v", filepath, string(data))
 	var output config.Configuration
 	if err := yaml.Unmarshal(data, &output); err != nil {
 		return nil, err
@@ -157,6 +158,13 @@ func newClient() *opslevel.Client {
 		opslevel.SetUserAgentExtra(fmt.Sprintf("agent-%s", _version)),
 		opslevel.SetTimeout(time.Second*time.Duration(viper.GetInt("api-timeout"))),
 	)
-	cobra.CheckErr(client.Validate())
+	err := client.Validate()
+	if err != nil {
+		if strings.Contains(err.Error(), "client validation error: Message: 401 Unauthorized") {
+			cobra.CheckErr(fmt.Errorf("unable to contact OpsLevel API - did you forget 'OPSLEVEL_API_TOKEN'?"))
+		} else {
+			cobra.CheckErr(err)
+		}
+	}
 	return client
 }

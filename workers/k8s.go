@@ -11,7 +11,6 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/opslevel/opslevel-go/v2024"
-	k8s "github.com/opslevel/opslevel-k8s-controller/v2024"
 	"github.com/rs/zerolog/log"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"opslevel-agent/controller"
@@ -19,12 +18,12 @@ import (
 
 type K8SWorker struct {
 	client      *opslevel.Client
-	selectors   []k8s.K8SSelector
+	selectors   []controller.Selector
 	cluster     string
 	integration string
 }
 
-func NewK8SWorker(cluster string, integration string, selectors []k8s.K8SSelector, client *opslevel.Client) *K8SWorker {
+func NewK8SWorker(cluster string, integration string, selectors []controller.Selector, client *opslevel.Client) *K8SWorker {
 	return &K8SWorker{
 		client:      client,
 		selectors:   selectors,
@@ -39,7 +38,7 @@ func (s *K8SWorker) Run(ctx context.Context, wg *sync.WaitGroup) {
 	}
 }
 
-func (s *K8SWorker) producer(ctx context.Context, wg *sync.WaitGroup, selector k8s.K8SSelector) {
+func (s *K8SWorker) producer(ctx context.Context, wg *sync.WaitGroup, selector controller.Selector) {
 	controller, err := controller.New(selector, 24*time.Hour)
 	if err != nil {
 		log.Error().Err(err).
@@ -120,7 +119,8 @@ func (s *K8SWorker) sendUpsert(kind string, id string, value opslevel.JSON) {
 		"value":       value,
 	}
 	if viper.GetBool("dry-run") {
-		log.Info().Msgf("[DRYRUN] UPSERT %s | %s | %#v", kind, id, value)
+		log.Info().Msgf("[DRYRUN] UPSERT %s | %s", kind, id)
+		log.Debug().Msgf("\t%#v", value)
 	} else {
 		log.Info().Msgf("UPSERT %s | %s", kind, id)
 		err := s.client.Mutate(&m, v, opslevel.WithName("IntegrationSourceObjectUpsert"))
