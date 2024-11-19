@@ -41,9 +41,14 @@ var rootCmd = &cobra.Command{
 		cobra.CheckErr(err)
 		ctx := signal.Init(context.Background())
 
+		resync, err := parseAndClampInterval(viper.GetString("resync-interval"), time.Hour)
+		cobra.CheckErr(err)
+		flush, err := parseAndClampInterval(viper.GetString("flush-interval"), 10*time.Second)
+		cobra.CheckErr(err)
+
 		var wg sync.WaitGroup
 		// go workers.NewWebhookWorker().Run(ctx, &wg)
-		go workers.NewK8SWorker(cluster, integration, configuration.Selectors, newClient()).Run(ctx, &wg)
+		workers.NewK8SWorker(cluster, integration, configuration.Selectors, newClient()).Run(ctx, &wg, resync, flush)
 		time.Sleep(1 * time.Second)
 		wg.Wait()
 	},
@@ -69,6 +74,8 @@ func init() {
 	rootCmd.PersistentFlags().String("api-token", "", "The OpsLevel API Token. Overrides environment variable 'OPSLEVEL_API_TOKEN'")
 	rootCmd.PersistentFlags().String("api-url", "https://app.opslevel.com/", "The OpsLevel API Url. Overrides environment variable 'OPSLEVEL_API_URL'")
 	rootCmd.PersistentFlags().Int("api-timeout", 40, "The OpsLevel API timeout in seconds. Overrides environment variable 'OPSLEVEL_API_TIMEOUT'")
+	rootCmd.PersistentFlags().String("resync-interval", "24h", "The interval at which the controller resync's the entire cluster (minimum 1h)")
+	rootCmd.PersistentFlags().String("flush-interval", "10s", "The interval at which the controller flushes cached events to the API (minimum 10s)")
 
 	rootCmd.PersistentFlags().String("integration", "", "The OpsLevel integration id or alias to send the data for.")
 	rootCmd.PersistentFlags().String("cluster", "dev", "The name of the cluster the agent is deployed in.")
@@ -167,4 +174,17 @@ func newClient() *opslevel.Client {
 		}
 	}
 	return client
+}
+
+func parseAndClampInterval(input string, min time.Duration) (time.Duration, error) {
+	duration, err := time.ParseDuration(input)
+	if err != nil {
+		return 0, err
+	}
+
+	// Enforce the minimum value
+	if duration < min {
+		duration = min
+	}
+	return duration, nil
 }

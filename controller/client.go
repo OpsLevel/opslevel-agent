@@ -1,75 +1,76 @@
 package controller
 
 import (
-	"github.com/go-logr/logr"
-	"k8s.io/apimachinery/pkg/api/meta"
+	"fmt"
+	"slices"
+	"strings"
+	"time"
+
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/discovery/cached/memory"
 	"k8s.io/client-go/dynamic"
-	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/dynamic/dynamicinformer"
 	"k8s.io/client-go/restmapper"
+	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/clientcmd"
-	"k8s.io/klog/v2"
 )
 
-type K8SClient struct {
-	Client  kubernetes.Interface
-	Dynamic dynamic.Interface
-	Mapper  *restmapper.DeferredDiscoveryRESTMapper
+type Client struct {
+	client dynamic.Interface
+	GVR    schema.GroupVersionResource
+	GVK    schema.GroupVersionKind
 }
 
-// NewK8SClient
+// NewClient
 // This creates a wrapper which gives you an initialized and connected kubernetes client
 // It then has a number of helper functions
-func NewK8SClient() (*K8SClient, error) {
+func NewClient(selector Selector) (*Client, error) {
 	loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
 	configOverrides := &clientcmd.ConfigOverrides{}
 	config, err := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loadingRules, configOverrides).ClientConfig()
+
+	client, err := dynamic.NewForConfig(config)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create dynamic client: %w", err)
 	}
 
-	client1, err := kubernetes.NewForConfig(config)
+	gv, err := schema.ParseGroupVersion(selector.ApiVersion)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("invalid apiVersion: %w", err)
 	}
 
-	client2, err := dynamic.NewForConfig(config)
-	if err != nil {
-		return nil, err
+	gvk := schema.GroupVersionKind{
+		Group:   gv.Group,
+		Version: gv.Version,
+		Kind:    selector.Kind,
 	}
 
-	dc, err := discovery.NewDiscoveryClientForConfig(config)
-	if err != nil {
-		return nil, err
-	}
+	dc := discovery.NewDiscoveryClientForConfigOrDie(config)
 	mapper := restmapper.NewDeferredDiscoveryRESTMapper(memory.NewMemCacheClient(dc))
 
-	// Suppress k8s client-go logs
-	klog.SetLogger(logr.Discard())
-	return &K8SClient{Client: client1, Dynamic: client2, Mapper: mapper}, nil
-}
-
-func (c *K8SClient) GetMapping(selector Selector) (*meta.RESTMapping, error) {
-	gv, gvErr := schema.ParseGroupVersion(selector.ApiVersion)
-	if gvErr != nil {
-		return nil, gvErr
-	}
-	gvk := gv.WithKind(selector.Kind)
-
-	mapping, mappingErr := c.Mapper.RESTMapping(gvk.GroupKind(), gvk.Version)
-	if mappingErr != nil {
-		return nil, mappingErr
-	}
-
-	return mapping, nil
-}
-
-func (c *K8SClient) GetGVR(selector Selector) (*schema.GroupVersionResource, error) {
-	mapping, err := c.GetMapping(selector)
+	mapping, err := mapper.RESTMapping(gvk.GroupKind(), gv.Version)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to resolve GVK to GVR: %w", err)
 	}
-	return &mapping.Resource, nil
+
+	return &Client{
+		client: client,
+		GVR:    mapping.Resource,
+		GVK:    gvk,
+	}, nil
+}
+
+func (s *Client) NewInformerFactory(resync time.Duration) cache.SharedIndexInformer {
+	return dynamicinformer.NewFilteredDynamicSharedInformerFactory(s.client, resync, corev1.NamespaceAll, nil).ForResource(s.GVR).Informer()
+}
+
+func (s *Client) ID() string {
+	return strings.Join(
+		slices.DeleteFunc(
+			[]string{s.GVK.Group, s.GVK.Version, s.GVK.Kind},
+			func(s string) bool { return s == "" },
+		),
+		"/")
 }

@@ -3,8 +3,6 @@ package workers
 import (
 	"context"
 	"encoding/json"
-	"slices"
-	"strings"
 	"sync"
 	"time"
 
@@ -32,68 +30,42 @@ func NewK8SWorker(cluster string, integration string, selectors []controller.Sel
 	}
 }
 
-func (s *K8SWorker) Run(ctx context.Context, wg *sync.WaitGroup) {
+func (s *K8SWorker) Run(ctx context.Context, wg *sync.WaitGroup, resync, flush time.Duration) {
 	for _, selector := range s.selectors {
-		go s.producer(ctx, wg, selector)
-	}
-}
-
-func (s *K8SWorker) producer(ctx context.Context, wg *sync.WaitGroup, selector controller.Selector) {
-	controller, err := controller.New(selector, 24*time.Hour)
-	if err != nil {
-		log.Error().Err(err).
-			Str("api", selector.ApiVersion).
-			Str("kind", selector.Kind).
-			Msgf("failed to start k8s controller")
-		return
-	}
-	controller.OnAdd = s.parser(true)
-	controller.OnUpdate = s.parser(true)
-	controller.OnDelete = s.parser(false)
-	wg.Add(1)
-	controller.Run(ctx)
-	wg.Done()
-}
-
-func (s *K8SWorker) parser(update bool) func(*unstructured.Unstructured) {
-	return func(item *unstructured.Unstructured) {
-		gvr := item.GroupVersionKind()
-		// I'm sorry to whomever future person reads this code because of a bug and hates me for this
-		kind := strings.Join(
-			slices.DeleteFunc(
-				[]string{gvr.Group, gvr.Version, gvr.Kind},
-				func(s string) bool { return s == "" },
-			),
-			"/")
-		id := strings.Join(
-			slices.DeleteFunc(
-				[]string{s.cluster, item.GetNamespace(), string(item.GetUID())},
-				func(s string) bool { return s == "" },
-			),
-			"/")
-
-		if update {
-			value, err := s.funcName(item)
-			if err != nil {
-				log.Error().Err(err).Msgf("failed to convert k8s resource")
-				return
-			}
-			s.sendUpsert(kind, id, value)
-		} else {
-			s.sendDelete(kind, id)
+		ctrl, err := controller.New(s.handle, selector, resync, flush)
+		if err != nil {
+			log.Error().Err(err).
+				Str("api", selector.ApiVersion).
+				Str("kind", selector.Kind).
+				Msgf("failed to start k8s controller")
+			continue
 		}
+		go ctrl.Run(ctx, wg)
+		time.Sleep(50 * time.Millisecond) // Jitter
 	}
 }
 
-func (s *K8SWorker) funcName(item *unstructured.Unstructured) (opslevel.JSON, error) {
-	// TODO: Cleanup Data Based on known types - Deployment, Statefulset, Daemonset
+func (s *K8SWorker) handle(evt controller.Event) {
+	kind := evt.ExternalKind()
+	id := evt.ExternalID(s.cluster)
+
+	switch evt.Op {
+	case controller.OpCreate, controller.OpUpdate:
+		value, err := s.parse(evt.New)
+		if err != nil {
+			log.Error().Err(err).Msgf("failed to convert k8s resource")
+		}
+		s.sendUpsert(kind, id, value)
+	case controller.OpDelete:
+		s.sendDelete(kind, id)
+	}
+}
+
+func (s *K8SWorker) parse(item *unstructured.Unstructured) (opslevel.JSON, error) {
 	unstructured.RemoveNestedField(item.Object, "metadata", "managedFields")
 	// unstructured.RemoveNestedField(item.Object, "spec")
 	// unstructured.RemoveNestedField(item.Object, "status", "conditions")
-	return s.toJson(item)
-}
 
-func (s *K8SWorker) toJson(item any) (opslevel.JSON, error) {
 	b, err := json.Marshal(item)
 	if err != nil {
 		return nil, err
