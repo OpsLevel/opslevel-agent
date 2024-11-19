@@ -48,7 +48,10 @@ var rootCmd = &cobra.Command{
 
 		var wg sync.WaitGroup
 		// go workers.NewWebhookWorker().Run(ctx, &wg)
-		workers.NewK8SWorker(cluster, integration, configuration.Selectors, newClient()).Run(ctx, &wg, resync, flush)
+		w, err := workers.NewK8SWorker(cluster, integration, configuration.Selectors, newClient(), resync, flush)
+		cobra.CheckErr(err)
+		w.Run(ctx, &wg)
+
 		time.Sleep(1 * time.Second)
 		wg.Wait()
 	},

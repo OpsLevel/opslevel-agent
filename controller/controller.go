@@ -3,82 +3,42 @@ package controller
 import (
 	"context"
 	"github.com/rs/zerolog/log"
-	"slices"
-	"strings"
 	"sync"
 	"time"
-
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/client-go/tools/cache"
 )
 
 type Handler func(Event)
 
 type Controller struct {
-	client   *Client
-	informer cache.SharedIndexInformer
-	handler  func(Event)
-	ticker   *time.Ticker
-	buffer   map[string]Event
-	cache    chan Event
+	informers []*Informer
+	handler   func(Event)
+	ticker    *time.Ticker
+	buffer    map[string]Event
+	cache     chan Event
 }
 
-func New(handler Handler, selector Selector, resync, flush time.Duration) (*Controller, error) {
+func New(handler Handler, selectors []Selector, resync, flush time.Duration) (*Controller, error) {
 	s := &Controller{
-		handler: handler,
-		ticker:  time.NewTicker(flush),
-		buffer:  make(map[string]Event),
-		cache:   make(chan Event),
+		informers: make([]*Informer, 0),
+		handler:   handler,
+		ticker:    time.NewTicker(flush),
+		buffer:    make(map[string]Event),
+		cache:     make(chan Event),
 	}
-	client, err := NewClient(selector)
+	client, err := NewClient()
 	if err != nil {
 		return nil, err
 	}
-	s.client = client
-	s.informer = client.NewInformerFactory(resync)
-	handlers := cache.ResourceEventHandlerFuncs{
-		AddFunc:    s.onCreate,
-		UpdateFunc: s.onUpdate,
-		DeleteFunc: s.onDelete,
-	}
-	if _, err := s.informer.AddEventHandler(handlers); err != nil {
-		return nil, err
+
+	for _, selector := range selectors {
+		informer, err := NewInformer(selector, client, resync, s.cache)
+		if err != nil {
+			log.Warn().Err(err).Msgf("unable to create informer for '%s'", selector.GroupVersionKind())
+			continue
+		}
+		s.informers = append(s.informers, informer)
 	}
 	return s, nil
-}
-
-func (s *Controller) key(item *unstructured.Unstructured) string {
-	gvk := s.client.GVK
-	return strings.Join(
-		slices.DeleteFunc(
-			[]string{gvk.Group, gvk.Version, gvk.Kind, item.GetNamespace(), string(item.GetUID())},
-			func(s string) bool { return s == "" },
-		),
-		"/")
-}
-
-func (s *Controller) onCreate(obj any) {
-	s.cache <- Event{
-		Op:  OpCreate,
-		Old: obj.(*unstructured.Unstructured),
-		New: obj.(*unstructured.Unstructured),
-	}
-}
-
-func (s *Controller) onUpdate(oldObj, newObj any) {
-	s.cache <- Event{
-		Op:  OpUpdate,
-		Old: oldObj.(*unstructured.Unstructured),
-		New: newObj.(*unstructured.Unstructured),
-	}
-}
-
-func (s *Controller) onDelete(obj any) {
-	s.cache <- Event{
-		Op:  OpDelete,
-		Old: obj.(*unstructured.Unstructured),
-		New: obj.(*unstructured.Unstructured),
-	}
 }
 
 func (s *Controller) flush() {
@@ -86,21 +46,23 @@ func (s *Controller) flush() {
 		s.handler(evt)
 		delete(s.buffer, key)
 	}
-	log.Debug().Msgf("[%s] Controller Flushed...", s.client.ID())
+	log.Debug().Msg("Controller Flushed...")
 }
 
-func (s *Controller) process(ctx context.Context) {
+func (s *Controller) process(ctx context.Context, wg *sync.WaitGroup) {
+	wg.Add(1)
 	hasFlushed := false
 	for {
 		select {
 		case <-ctx.Done():
-			log.Info().Msgf("[%s] Controller Stopping...", s.client.ID())
+			log.Info().Msgf("Controller Stopping...")
 			s.flush()
+			wg.Done()
 			return
 		case evt := <-s.cache:
 			if hasFlushed {
-				log.Debug().Msgf("[%s] Controller buffered %s ...", s.client.ID(), s.key(evt.New))
-				s.buffer[s.key(evt.New)] = evt
+				log.Debug().Msgf("Controller buffered %s ...", evt.Key)
+				s.buffer[evt.Key] = evt
 			} else {
 				s.handler(evt)
 			}
@@ -112,11 +74,9 @@ func (s *Controller) process(ctx context.Context) {
 }
 
 func (s *Controller) Run(ctx context.Context, wg *sync.WaitGroup) {
-	log.Info().Msgf("[%s] Controller Starting...", s.client.ID())
-	wg.Add(1)
-	go s.process(ctx)
-	s.informer.Run(ctx.Done())
-	time.Sleep(1 * time.Second)
-	wg.Done()
-	log.Info().Msgf("[%s] Controller Stopped.", s.client.ID())
+	log.Info().Msgf("Controller Starting...")
+	go s.process(ctx, wg)
+	for _, informer := range s.informers {
+		go informer.Run(ctx, wg)
+	}
 }

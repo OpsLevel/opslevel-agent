@@ -15,34 +15,25 @@ import (
 )
 
 type K8SWorker struct {
-	client      *opslevel.Client
-	selectors   []controller.Selector
 	cluster     string
 	integration string
+	client      *opslevel.Client
+	controller  *controller.Controller
 }
 
-func NewK8SWorker(cluster string, integration string, selectors []controller.Selector, client *opslevel.Client) *K8SWorker {
-	return &K8SWorker{
+func NewK8SWorker(cluster string, integration string, selectors []controller.Selector, client *opslevel.Client, resync, flush time.Duration) (*K8SWorker, error) {
+	s := &K8SWorker{
 		client:      client,
-		selectors:   selectors,
 		cluster:     cluster,
 		integration: integration,
 	}
+	ctrl, err := controller.New(s.handle, selectors, resync, flush)
+	s.controller = ctrl
+	return s, err
 }
 
-func (s *K8SWorker) Run(ctx context.Context, wg *sync.WaitGroup, resync, flush time.Duration) {
-	for _, selector := range s.selectors {
-		ctrl, err := controller.New(s.handle, selector, resync, flush)
-		if err != nil {
-			log.Error().Err(err).
-				Str("api", selector.ApiVersion).
-				Str("kind", selector.Kind).
-				Msgf("failed to start k8s controller")
-			continue
-		}
-		go ctrl.Run(ctx, wg)
-		time.Sleep(50 * time.Millisecond) // Jitter
-	}
+func (s *K8SWorker) Run(ctx context.Context, wg *sync.WaitGroup) {
+	s.controller.Run(ctx, wg)
 }
 
 func (s *K8SWorker) handle(evt controller.Event) {

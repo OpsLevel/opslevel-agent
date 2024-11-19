@@ -16,6 +16,7 @@ const (
 )
 
 type Event struct {
+	Key string
 	Op  Operation
 	Old *unstructured.Unstructured
 	New *unstructured.Unstructured
