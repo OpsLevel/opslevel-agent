@@ -3,15 +3,16 @@ package controller
 import (
 	"context"
 	"fmt"
+	"slices"
+	"strings"
+	"sync"
+	"time"
+
 	"github.com/rs/zerolog/log"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/dynamic/dynamicinformer"
 	"k8s.io/client-go/tools/cache"
-	"slices"
-	"strings"
-	"sync"
-	"time"
 )
 
 type Informer struct {

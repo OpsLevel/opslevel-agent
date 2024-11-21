@@ -2,9 +2,10 @@ package controller
 
 import (
 	"context"
-	"github.com/rs/zerolog/log"
 	"sync"
 	"time"
+
+	"github.com/rs/zerolog/log"
 )
 
 type Handler interface {
