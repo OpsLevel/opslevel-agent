@@ -14,6 +14,7 @@ func Init(parent context.Context) context.Context {
 	closeChannel := make(chan os.Signal, 1)
 	signal.Notify(closeChannel, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
+		log.Info().Msg("waiting for interrupt signal")
 		sig := <-closeChannel
 		log.Info().Str("signal", sig.String()).Msg("Handling interruption")
 		cancel()

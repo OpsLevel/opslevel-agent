@@ -39,7 +39,6 @@ var rootCmd = &cobra.Command{
 		integration := viper.GetString("integration")
 		configuration, err := LoadConfig()
 		cobra.CheckErr(err)
-		ctx := signal.Init(context.Background())
 
 		resync, err := parseAndClampInterval(viper.GetString("resync-interval"), time.Hour)
 		cobra.CheckErr(err)
@@ -47,10 +46,9 @@ var rootCmd = &cobra.Command{
 		cobra.CheckErr(err)
 
 		var wg sync.WaitGroup
+		ctx := signal.Init(context.Background())
 		// go workers.NewWebhookWorker().Run(ctx, &wg)
-		w, err := workers.NewK8SWorker(cluster, integration, configuration.Selectors, newClient(), resync, flush)
-		cobra.CheckErr(err)
-		w.Run(ctx, &wg)
+		go workers.NewK8SWorker(ctx, &wg, cluster, integration, configuration.Selectors, newClient(), resync, flush)
 
 		time.Sleep(1 * time.Second)
 		wg.Wait()

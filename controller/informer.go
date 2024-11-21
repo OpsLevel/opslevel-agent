@@ -78,7 +78,7 @@ func (s *Informer) onDelete(obj any) {
 func (s *Informer) Run(ctx context.Context, wg *sync.WaitGroup) {
 	log.Info().Msgf("[%s] Informer Starting...", s.selector.GroupVersionKind())
 	wg.Add(1)
+	defer wg.Done()
 	s.informer.Run(ctx.Done())
-	wg.Done()
 	log.Info().Msgf("[%s] Informer Stopping...", s.selector.GroupVersionKind())
 }

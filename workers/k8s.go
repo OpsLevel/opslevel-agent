@@ -21,22 +21,15 @@ type K8SWorker struct {
 	controller  *controller.Controller
 }
 
-func NewK8SWorker(cluster string, integration string, selectors []controller.Selector, client *opslevel.Client, resync, flush time.Duration) (*K8SWorker, error) {
-	s := &K8SWorker{
+func NewK8SWorker(ctx context.Context, wg *sync.WaitGroup, cluster string, integration string, selectors []controller.Selector, client *opslevel.Client, resync, flush time.Duration) {
+	controller.Run(ctx, wg, selectors, resync, flush, &K8SWorker{
 		client:      client,
 		cluster:     cluster,
 		integration: integration,
-	}
-	ctrl, err := controller.New(s.handle, selectors, resync, flush)
-	s.controller = ctrl
-	return s, err
+	})
 }
 
-func (s *K8SWorker) Run(ctx context.Context, wg *sync.WaitGroup) {
-	s.controller.Run(ctx, wg)
-}
-
-func (s *K8SWorker) handle(evt controller.Event) {
+func (s *K8SWorker) Handle(evt controller.Event) {
 	kind := evt.ExternalKind()
 	id := evt.ExternalID(s.cluster)
 
