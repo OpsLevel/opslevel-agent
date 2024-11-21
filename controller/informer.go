@@ -29,6 +29,7 @@ func NewInformer(selector Selector, client *Client, resync time.Duration, queue 
 	s := &Informer{
 		selector: selector,
 		informer: informer,
+		queue:    queue,
 	}
 	handlers := cache.ResourceEventHandlerFuncs{
 		AddFunc:    s.onCreate,
