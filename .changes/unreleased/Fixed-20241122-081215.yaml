@@ -1,0 +1,3 @@
+kind: Fixed
+body: Fix signal shutdown to actually shutdown all informers
+time: 2024-11-22T08:12:15.252751-06:00

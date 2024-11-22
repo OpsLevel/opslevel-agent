@@ -55,7 +55,7 @@ func Run(ctx context.Context, wg *sync.WaitGroup, selectors []Selector, resync, 
 		handler: handler,
 		ticker:  time.NewTicker(flush),
 		buffer:  make(map[string]Event),
-		cache:   make(chan Event),
+		cache:   make(chan Event, 1),
 	}
 	client, err := NewClient()
 	if err != nil {
