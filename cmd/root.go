@@ -37,6 +37,9 @@ var rootCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		cluster := viper.GetString("cluster")
 		integration := viper.GetString("integration")
+		if integration == "" {
+			cobra.CheckErr(fmt.Errorf("--integration was not given please specify the ID or Alias of the kubernetes integration to send the events too"))
+		}
 		configuration, err := LoadConfig()
 		cobra.CheckErr(err)
 
