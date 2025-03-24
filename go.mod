@@ -4,7 +4,7 @@ go 1.23.1
 
 require (
 	github.com/opslevel/opslevel-go/v2024 v2024.11.8
-	github.com/rs/zerolog v1.33.0
+	github.com/rs/zerolog v1.34.0
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/viper v1.19.0
 	go.uber.org/automaxprocs v1.6.0
