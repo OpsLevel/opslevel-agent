@@ -65,7 +65,7 @@ func (s *K8SWorker) parse(item *unstructured.Unstructured) (opslevel.JSON, error
 func (s *K8SWorker) sendUpsert(kind string, id string, value opslevel.JSON) {
 	var m struct {
 		Payload struct {
-			Errors []opslevel.OpsLevelErrors
+			Errors []opslevel.Error
 		} `graphql:"integrationSourceObjectUpsert(externalId: $id, externalKind: $kind, integration: $integration, value: $value)"`
 	}
 	v := opslevel.PayloadVariables{
@@ -89,7 +89,7 @@ func (s *K8SWorker) sendUpsert(kind string, id string, value opslevel.JSON) {
 func (s *K8SWorker) sendDelete(kind string, id string) {
 	var m struct {
 		Payload struct {
-			Errors []opslevel.OpsLevelErrors
+			Errors []opslevel.Error
 		} `graphql:"integrationSourceObjectDelete(externalId: $id, externalKind: $kind, integration: $integration)"`
 	}
 	v := opslevel.PayloadVariables{
