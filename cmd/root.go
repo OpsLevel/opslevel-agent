@@ -13,7 +13,7 @@ import (
 	"k8s.io/utils/path"
 	"opslevel-agent/config"
 
-	"github.com/opslevel/opslevel-go/v2024"
+	"github.com/opslevel/opslevel-go/v2025"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"

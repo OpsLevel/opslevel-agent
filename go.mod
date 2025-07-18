@@ -5,7 +5,7 @@ go 1.24.0
 toolchain go1.24.2
 
 require (
-	github.com/opslevel/opslevel-go/v2024 v2024.12.24
+	github.com/opslevel/opslevel-go/v2025 v2025.6.13
 	github.com/rs/zerolog v1.34.0
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/viper v1.20.1
@@ -88,4 +88,4 @@ require (
 )
 
 // Uncomment for local development
-//replace github.com/opslevel/opslevel-go/v2024 => ./submodules/opslevel-go
+//replace github.com/opslevel/opslevel-go/v2025 => ./submodules/opslevel-go
