@@ -25,6 +25,12 @@ tasks:
       - go mod tidy
       - golangci-lint run --timeout 5m --fix
 
+  deps:
+    desc: Update dependencies
+    cmds:
+      - go get -u
+      - go mod tidy
+
   test:
     desc: Run tests
     dir: "{{.SRC_DIR}}"
