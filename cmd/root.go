@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"github.com/go-resty/resty/v2"
 	"os"
 	"runtime"
 	"strings"
@@ -54,7 +55,7 @@ opslevel-agent commit: %s (%s)
 		var wg sync.WaitGroup
 		ctx := signal.Init(context.Background())
 		// go workers.NewWebhookWorker().Run(ctx, &wg)
-		go workers.NewK8SWorker(ctx, &wg, cluster, integration, configuration.Selectors, newClient(), resync, flush)
+		go workers.NewK8SWorker(ctx, &wg, cluster, integration, configuration.Selectors, newClient(), newRESTClient(), resync, flush)
 
 		time.Sleep(1 * time.Second)
 		wg.Wait()
@@ -163,6 +164,15 @@ func LoadConfig() (*config.Configuration, error) {
 		return nil, err
 	}
 	return &output, nil
+}
+
+func newRESTClient() *resty.Client {
+	client := opslevel.NewRestClient(
+		opslevel.SetURL(viper.GetString("api-url")),
+		opslevel.SetUserAgentExtra(fmt.Sprintf("agent-%s", _version)),
+		opslevel.SetTimeout(time.Second*time.Duration(viper.GetInt("api-timeout"))),
+	)
+	return client
 }
 
 func newClient() *opslevel.Client {
