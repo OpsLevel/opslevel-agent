@@ -22,6 +22,9 @@ func NewClient() (*Client, error) {
 	loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
 	configOverrides := &clientcmd.ConfigOverrides{}
 	config, err := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loadingRules, configOverrides).ClientConfig()
+	if err != nil {
+		return nil, fmt.Errorf("failed to load client config: %w", err)
+	}
 
 	client, err := dynamic.NewForConfig(config)
 	if err != nil {

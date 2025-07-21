@@ -18,7 +18,6 @@ type K8SWorker struct {
 	cluster     string
 	integration string
 	client      *opslevel.Client
-	controller  *controller.Controller
 }
 
 func NewK8SWorker(ctx context.Context, wg *sync.WaitGroup, cluster string, integration string, selectors []controller.Selector, client *opslevel.Client, resync, flush time.Duration) {

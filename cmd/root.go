@@ -33,7 +33,10 @@ var (
 var rootCmd = &cobra.Command{
 	Use:   "opslevel-agent",
 	Short: "",
-	Long:  ``,
+	Long: fmt.Sprintf(`
+
+opslevel-agent commit: %s (%s)
+`, _commit, _date),
 	Run: func(cmd *cobra.Command, args []string) {
 		cluster := viper.GetString("cluster")
 		integration := viper.GetString("integration")
