@@ -8,7 +8,7 @@ import (
 
 	"github.com/spf13/viper"
 
-	"github.com/opslevel/opslevel-go/v2024"
+	"github.com/opslevel/opslevel-go/v2025"
 	"github.com/rs/zerolog/log"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"opslevel-agent/controller"
@@ -18,7 +18,6 @@ type K8SWorker struct {
 	cluster     string
 	integration string
 	client      *opslevel.Client
-	controller  *controller.Controller
 }
 
 func NewK8SWorker(ctx context.Context, wg *sync.WaitGroup, cluster string, integration string, selectors []controller.Selector, client *opslevel.Client, resync, flush time.Duration) {
@@ -65,7 +64,7 @@ func (s *K8SWorker) parse(item *unstructured.Unstructured) (opslevel.JSON, error
 func (s *K8SWorker) sendUpsert(kind string, id string, value opslevel.JSON) {
 	var m struct {
 		Payload struct {
-			Errors []opslevel.OpsLevelErrors
+			Errors []opslevel.Error
 		} `graphql:"integrationSourceObjectUpsert(externalId: $id, externalKind: $kind, integration: $integration, value: $value)"`
 	}
 	v := opslevel.PayloadVariables{
@@ -89,7 +88,7 @@ func (s *K8SWorker) sendUpsert(kind string, id string, value opslevel.JSON) {
 func (s *K8SWorker) sendDelete(kind string, id string) {
 	var m struct {
 		Payload struct {
-			Errors []opslevel.OpsLevelErrors
+			Errors []opslevel.Error
 		} `graphql:"integrationSourceObjectDelete(externalId: $id, externalKind: $kind, integration: $integration)"`
 	}
 	v := opslevel.PayloadVariables{

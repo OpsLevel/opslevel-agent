@@ -13,7 +13,7 @@ import (
 	"k8s.io/utils/path"
 	"opslevel-agent/config"
 
-	"github.com/opslevel/opslevel-go/v2024"
+	"github.com/opslevel/opslevel-go/v2025"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -33,7 +33,10 @@ var (
 var rootCmd = &cobra.Command{
 	Use:   "opslevel-agent",
 	Short: "",
-	Long:  ``,
+	Long: fmt.Sprintf(`
+
+opslevel-agent commit: %s (%s)
+`, _commit, _date),
 	Run: func(cmd *cobra.Command, args []string) {
 		cluster := viper.GetString("cluster")
 		integration := viper.GetString("integration")
