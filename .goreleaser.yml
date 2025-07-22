@@ -1,5 +1,6 @@
 version: 2
 project_name: opslevel-agent
+
 before:
   hooks:
     - go mod tidy
@@ -13,6 +14,9 @@ builds:
     goos:
       - linux
       - darwin
+    ignore:
+      - goos: darwin
+        goarch: '386'
     binary: '{{ .ProjectName }}'
 
 universal_binaries:
@@ -28,21 +32,52 @@ archives:
       {{- else if eq .Arch "386" }}i386
       {{- else }}{{ .Arch }}{{ end }}
       {{- if .Arm }}v{{ .Arm }}{{ end }}
+    format_overrides:
+      - goos: windows
+        formats: zip
 
 dockers:
-  - image_templates:
-      - "public.ecr.aws/opslevel/opslevel-agent:latest"
-      - "public.ecr.aws/opslevel/opslevel-agent:{{ .Tag }}"
+  -
+    dockerfile: Dockerfile
+    use: buildx
+    image_templates:
+      - "public.ecr.aws/opslevel/opslevel-agent:{{ .Tag }}-amd64"
     build_flag_templates:
       - "--label=org.opencontainers.image.created={{ .Date }}"
       - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
       - "--label=org.opencontainers.image.version={{ .Tag }}"
+      - "--build-arg=VERSION={{ .Tag }}"
+      - "--platform=linux/amd64"
+    goos: linux
+    goarch: amd64
+  -
+    dockerfile: Dockerfile
+    use: buildx
+    image_templates:
+      - "public.ecr.aws/opslevel/opslevel-agent:{{ .Tag }}-arm64"
+    build_flag_templates:
+      - "--label=org.opencontainers.image.created={{ .Date }}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+      - "--label=org.opencontainers.image.version={{ .Tag }}"
+      - "--build-arg=VERSION={{ .Tag }}"
+      - "--platform=linux/arm64"
+    goos: linux
+    goarch: arm64
+
+docker_manifests:
+  - name_template: "public.ecr.aws/opslevel/opslevel-agent:latest"
+    image_templates:
+      - "public.ecr.aws/opslevel/opslevel-agent:{{ .Tag }}-amd64"
+      - "public.ecr.aws/opslevel/opslevel-agent:{{ .Tag }}-arm64"
+  - name_template: "public.ecr.aws/opslevel/mcp:{{ .Tag }}"
+    image_templates:
+      - "public.ecr.aws/opslevel/opslevel-agent:{{ .Tag }}-amd64"
+      - "public.ecr.aws/opslevel/opslevel-agent:{{ .Tag }}-arm64"
 
 brews:
   - name: opslevel-agent
     description: "Main repository for the OpsLevel agent"
     homepage: "https://www.opslevel.com/"
-    url_template: "https://github.com/opslevel/{{ .ProjectName }}/archive/refs/tags/{{ .Tag }}.tar.gz"
     commit_author:
       name: OpsLevel Bots
       email: bots@opslevel.com
@@ -59,16 +94,11 @@ brews:
       owner: OpsLevel
       name: homebrew-tap
       token: "{{ .Env.ORG_GITHUB_TOKEN }}"
-      pull_request:
-        enabled: true
-        draft: false
-        base:
-          owner: OpsLevel
-          name: homebrew-tap
-          branch: main
+
 checksum:
-  name_template: '{{ .ProjectName }}_SHA256SUMS'
+  name_template: '{{ .ProjectName }}.sha256'
   algorithm: sha256
+
 signs:
   - artifacts: checksum
     args:
@@ -85,9 +115,3 @@ changelog:
   filters:
     exclude:
       - "^Merge"
-release:
-  footer: >-
-
-    ---
-
-    Released by [GoReleaser](https://github.com/goreleaser/goreleaser).
