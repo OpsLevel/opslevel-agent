@@ -32,21 +32,3 @@ functionalities for OpsLevel.  The current functionalities are:
 | Name                            | Type        | Description                                                   |
 |---------------------------------|-------------|---------------------------------------------------------------|
 
-
-
-
-
-
----
-extractors:
-- external_kind: apps_v1_Deployment
-  external_id: ".metadata.uid"
----
-transforms:
-- external_kind: apps_v1_Deployment
-  opslevel_kind: service
-  opslevel_identifier: ".metadata.name"
-  on_component_not_found: suggest
-  properties:
-  namespace: ".metadata.namespace"
-  containers: ".spec.template.spec | .containers + .initContainers | map(.image)"
