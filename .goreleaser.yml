@@ -15,6 +15,9 @@ builds:
       - darwin
     binary: '{{ .ProjectName }}'
 
+universal_binaries:
+  - replace: true
+
 archives:
   - formats: [tar.gz]
     # this name template makes the OS and Arch compatible with the results of `uname`.
