@@ -4,10 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/go-resty/resty/v2"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/go-resty/resty/v2"
 
 	"github.com/spf13/viper"
 
@@ -20,16 +21,16 @@ import (
 type K8SWorker struct {
 	cluster     string
 	integration string
-	client      *opslevel.Client
-	rest        *resty.Client
+	gqlClient   *opslevel.Client
+	restClient  *resty.Client
 }
 
-func NewK8SWorker(ctx context.Context, wg *sync.WaitGroup, cluster string, integration string, selectors []controller.Selector, client *opslevel.Client, rest *resty.Client, resync, flush time.Duration) {
+func NewK8SWorker(ctx context.Context, wg *sync.WaitGroup, cluster string, integration string, selectors []controller.Selector, gqlClient *opslevel.Client, restClient *resty.Client, resync, flush time.Duration) {
 	controller.Run(ctx, wg, selectors, resync, flush, &K8SWorker{
 		cluster:     cluster,
 		integration: integration,
-		client:      client,
-		rest:        rest,
+		gqlClient:   gqlClient,
+		restClient:  restClient,
 	})
 }
 
@@ -80,7 +81,7 @@ func (s *K8SWorker) sendEvent(kind string, id string, value *unstructured.Unstru
 		log.Debug().Msgf("\t%#v", value)
 	} else {
 		url := fmt.Sprintf("%s?external_kind=%s", s.integration, kind)
-		resp, err := s.rest.R().SetBody(value).Post(url)
+		resp, err := s.restClient.R().SetBody(value).Post(url)
 		if err != nil {
 			log.Error().Err(err).Msgf("error during post")
 			return
@@ -110,7 +111,7 @@ func (s *K8SWorker) sendUpsert(kind string, id string, value opslevel.JSON) {
 		log.Debug().Msgf("\t%#v", value)
 	} else {
 		log.Info().Msgf("UPSERT %s | %s", kind, id)
-		err := s.client.Mutate(&m, v, opslevel.WithName("IntegrationSourceObjectUpsert"))
+		err := s.gqlClient.Mutate(&m, v, opslevel.WithName("IntegrationSourceObjectUpsert"))
 		if err != nil {
 			log.Error().Err(err).Msgf("error during upsert mutate")
 		}
@@ -132,7 +133,7 @@ func (s *K8SWorker) sendDelete(kind string, id string) {
 		log.Info().Msgf("[DRYRUN] DELETE %s | %s ", kind, id)
 	} else {
 		log.Info().Msgf("DELETE %s | %s ", kind, id)
-		err := s.client.Mutate(&m, v, opslevel.WithName("IntegrationSourceObjectDelete"))
+		err := s.gqlClient.Mutate(&m, v, opslevel.WithName("IntegrationSourceObjectDelete"))
 		if err != nil {
 			log.Error().Err(err).Msgf("error during delete mutate")
 		}
