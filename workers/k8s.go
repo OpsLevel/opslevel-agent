@@ -3,8 +3,12 @@ package workers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"strings"
 	"sync"
 	"time"
+
+	"github.com/go-resty/resty/v2"
 
 	"github.com/spf13/viper"
 
@@ -17,14 +21,16 @@ import (
 type K8SWorker struct {
 	cluster     string
 	integration string
-	client      *opslevel.Client
+	gqlClient   *opslevel.Client
+	restClient  *resty.Client
 }
 
-func NewK8SWorker(ctx context.Context, wg *sync.WaitGroup, cluster string, integration string, selectors []controller.Selector, client *opslevel.Client, resync, flush time.Duration) {
+func NewK8SWorker(ctx context.Context, wg *sync.WaitGroup, cluster string, integration string, selectors []controller.Selector, gqlClient *opslevel.Client, restClient *resty.Client, resync, flush time.Duration) {
 	controller.Run(ctx, wg, selectors, resync, flush, &K8SWorker{
-		client:      client,
 		cluster:     cluster,
 		integration: integration,
+		gqlClient:   gqlClient,
+		restClient:  restClient,
 	})
 }
 
@@ -32,15 +38,22 @@ func (s *K8SWorker) Handle(evt controller.Event) {
 	kind := evt.ExternalKind()
 	id := evt.ExternalID(s.cluster)
 
-	switch evt.Op {
-	case controller.OpCreate, controller.OpUpdate:
-		value, err := s.parse(evt.New)
-		if err != nil {
-			log.Error().Err(err).Msgf("failed to convert k8s resource")
+	if strings.Contains(s.integration, "integrations/custom/webhook") {
+		switch evt.Op {
+		case controller.OpCreate, controller.OpUpdate:
+			s.sendEvent(kind, id, evt.New)
 		}
-		s.sendUpsert(kind, id, value)
-	case controller.OpDelete:
-		s.sendDelete(kind, id)
+	} else {
+		switch evt.Op {
+		case controller.OpCreate, controller.OpUpdate:
+			value, err := s.parse(evt.New)
+			if err != nil {
+				log.Error().Err(err).Msgf("failed to convert k8s resource")
+			}
+			s.sendUpsert(kind, id, value)
+		case controller.OpDelete:
+			s.sendDelete(kind, id)
+		}
 	}
 }
 
@@ -61,6 +74,26 @@ func (s *K8SWorker) parse(item *unstructured.Unstructured) (opslevel.JSON, error
 	return data, nil
 }
 
+func (s *K8SWorker) sendEvent(kind string, id string, value *unstructured.Unstructured) {
+	kind = strings.Replace(kind, "/", "_", -1)
+	if viper.GetBool("dry-run") {
+		log.Info().Msgf("[DRYRUN] POST %s | %s", kind, id)
+		log.Debug().Msgf("\t%#v", value)
+	} else {
+		url := fmt.Sprintf("%s?external_kind=%s", s.integration, kind)
+		resp, err := s.restClient.R().SetBody(value).Post(url)
+		if err != nil {
+			log.Error().Err(err).Msgf("error during post")
+			return
+		}
+		if resp.StatusCode() > 299 {
+			log.Error().Msgf("%v", resp)
+			return
+		}
+		log.Info().Msgf("POST %s | %s", kind, id)
+	}
+}
+
 func (s *K8SWorker) sendUpsert(kind string, id string, value opslevel.JSON) {
 	var m struct {
 		Payload struct {
@@ -78,7 +111,7 @@ func (s *K8SWorker) sendUpsert(kind string, id string, value opslevel.JSON) {
 		log.Debug().Msgf("\t%#v", value)
 	} else {
 		log.Info().Msgf("UPSERT %s | %s", kind, id)
-		err := s.client.Mutate(&m, v, opslevel.WithName("IntegrationSourceObjectUpsert"))
+		err := s.gqlClient.Mutate(&m, v, opslevel.WithName("IntegrationSourceObjectUpsert"))
 		if err != nil {
 			log.Error().Err(err).Msgf("error during upsert mutate")
 		}
@@ -100,7 +133,7 @@ func (s *K8SWorker) sendDelete(kind string, id string) {
 		log.Info().Msgf("[DRYRUN] DELETE %s | %s ", kind, id)
 	} else {
 		log.Info().Msgf("DELETE %s | %s ", kind, id)
-		err := s.client.Mutate(&m, v, opslevel.WithName("IntegrationSourceObjectDelete"))
+		err := s.gqlClient.Mutate(&m, v, opslevel.WithName("IntegrationSourceObjectDelete"))
 		if err != nil {
 			log.Error().Err(err).Msgf("error during delete mutate")
 		}

@@ -9,16 +9,16 @@ import (
 	"sync"
 	"time"
 
-	"gopkg.in/yaml.v3"
-	"k8s.io/utils/path"
-	"opslevel-agent/config"
-
+	"github.com/go-resty/resty/v2"
 	"github.com/opslevel/opslevel-go/v2025"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"go.uber.org/automaxprocs/maxprocs"
+	"gopkg.in/yaml.v3"
+	"k8s.io/utils/path"
+	"opslevel-agent/config"
 	"opslevel-agent/signal"
 	"opslevel-agent/workers"
 )
@@ -54,7 +54,7 @@ opslevel-agent commit: %s (%s)
 		var wg sync.WaitGroup
 		ctx := signal.Init(context.Background())
 		// go workers.NewWebhookWorker().Run(ctx, &wg)
-		go workers.NewK8SWorker(ctx, &wg, cluster, integration, configuration.Selectors, newClient(), resync, flush)
+		go workers.NewK8SWorker(ctx, &wg, cluster, integration, configuration.Selectors, newGraphClient(), newRESTClient(), resync, flush)
 
 		time.Sleep(1 * time.Second)
 		wg.Wait()
@@ -165,7 +165,14 @@ func LoadConfig() (*config.Configuration, error) {
 	return &output, nil
 }
 
-func newClient() *opslevel.Client {
+func newRESTClient() *resty.Client {
+	return opslevel.NewRestClient(
+		opslevel.SetUserAgentExtra(fmt.Sprintf("agent-%s", _version)),
+		opslevel.SetTimeout(time.Second*time.Duration(viper.GetInt("api-timeout"))),
+	)
+}
+
+func newGraphClient() *opslevel.Client {
 	client := opslevel.NewGQLClient(
 		opslevel.SetAPIToken(viper.GetString("api-token")),
 		opslevel.SetURL(viper.GetString("api-url")),
