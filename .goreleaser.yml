@@ -69,7 +69,7 @@ docker_manifests:
     image_templates:
       - "public.ecr.aws/opslevel/opslevel-agent:{{ .Tag }}-amd64"
       - "public.ecr.aws/opslevel/opslevel-agent:{{ .Tag }}-arm64"
-  - name_template: "public.ecr.aws/opslevel/mcp:{{ .Tag }}"
+  - name_template: "public.ecr.aws/opslevel/opslevel-agent:{{ .Tag }}"
     image_templates:
       - "public.ecr.aws/opslevel/opslevel-agent:{{ .Tag }}-amd64"
       - "public.ecr.aws/opslevel/opslevel-agent:{{ .Tag }}-arm64"
