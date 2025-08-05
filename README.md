@@ -21,7 +21,7 @@ Main repository for the OpsLevel agent
 The OpsLevel agent is a multi-facet application that runs in your cloud and connects with OpsLevel to support multiple
 functionalities for OpsLevel.  The current functionalities are:
 
-- Kubernetes Service Detection
+- [Kubernetes Service Detection](https://github.com/OpsLevel/helm-charts/blob/main/charts/opslevel-agent/README.md#opslevel-agent)
 
 ## Quickstart
 
