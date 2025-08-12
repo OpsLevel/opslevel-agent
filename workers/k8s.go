@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -75,12 +76,11 @@ func (s *K8SWorker) parse(item *unstructured.Unstructured) (opslevel.JSON, error
 }
 
 func (s *K8SWorker) sendEvent(kind string, id string, value *unstructured.Unstructured) {
-	kind = strings.Replace(kind, "/", "_", -1)
 	if viper.GetBool("dry-run") {
 		log.Info().Msgf("[DRYRUN] POST %s | %s", kind, id)
 		log.Debug().Msgf("\t%#v", value)
 	} else {
-		url := fmt.Sprintf("%s?external_kind=%s", s.integration, kind)
+		url := fmt.Sprintf("%s?external_kind=%s", s.integration, url.QueryEscape(kind))
 		resp, err := s.restClient.R().SetBody(value).Post(url)
 		if err != nil {
 			log.Error().Err(err).Msgf("error during post")
