@@ -8,13 +8,9 @@ var (
 	DefaultConfiguration = &Configuration{
 		Selectors: []controller.Selector{
 			{
-				ApiVersion: "apps/v1",
-				Kind:       "Deployment",
+				ApiVersion: "v1",
+				Kind:       "Namespace",
 			},
-		},
-	}
-	ExtendedConfiguration = &Configuration{
-		Selectors: []controller.Selector{
 			{
 				ApiVersion: "apps/v1",
 				Kind:       "Deployment",
@@ -28,24 +24,16 @@ var (
 				Kind:       "DaemonSet",
 			},
 			{
-				ApiVersion: "batch/v1",
-				Kind:       "CronJob",
+				ApiVersion: "networking.k8s.io/v1",
+				Kind:       "Ingress",
 			},
 			{
 				ApiVersion: "v1",
 				Kind:       "Service",
 			},
 			{
-				ApiVersion: "apiregistration.k8s.io/v1",
-				Kind:       "APIService",
-			},
-			{
-				ApiVersion: "autoscaling/v2",
-				Kind:       "HorizontalPodAutoscaler",
-			},
-			{
-				ApiVersion: "v1",
-				Kind:       "Pod",
+				ApiVersion: "batch/v1",
+				Kind:       "CronJob",
 			},
 		},
 	}

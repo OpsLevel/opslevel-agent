@@ -75,7 +75,6 @@ func Execute(version, commit, date string) {
 func init() {
 	rootCmd.PersistentFlags().StringP("config", "c", "./config.yaml", "The configuration file to read in - if not found a default is used. Overrides environment variable 'OPSLEVEL_CONFIG_PATH")
 	rootCmd.PersistentFlags().Bool("dry-run", false, "If true, no mutative actions will be taken.")
-	rootCmd.PersistentFlags().Bool("extended", false, "If true, uses the extended default configuration.")
 	rootCmd.PersistentFlags().String("log-format", "TEXT", "Overrides environment variable 'OPSLEVEL_LOG_FORMAT' (options [\"JSON\", \"TEXT\"])")
 	rootCmd.PersistentFlags().String("log-level", "INFO", "Overrides environment variable 'OPSLEVEL_LOG_LEVEL' (options [\"ERROR\", \"WARN\", \"INFO\", \"DEBUG\"])")
 	rootCmd.PersistentFlags().String("api-token", "", "The OpsLevel API Token. Overrides environment variable 'OPSLEVEL_API_TOKEN'")
@@ -148,9 +147,6 @@ func LoadConfig() (*config.Configuration, error) {
 		return nil, err
 	}
 	if !ok {
-		if viper.GetBool("extended") {
-			return config.ExtendedConfiguration, nil
-		}
 		return config.DefaultConfiguration, nil
 	}
 	data, err := os.ReadFile(filepath)

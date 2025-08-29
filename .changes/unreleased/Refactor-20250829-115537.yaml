@@ -1,0 +1,3 @@
+kind: Refactor
+body: Remove the --extended configuration as the default configuration now matches the integration settings in OpsLevel
+time: 2025-08-29T11:55:37.843381-04:00
