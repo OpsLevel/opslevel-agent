@@ -43,8 +43,7 @@ jobs:
           CHANGIE_BODY: ${{ github.event.workflow_run.display_title }}
         shell: bash
         run: |
-          go install github.com/miniscruff/changie@v1.23.0
-          changie new --kind Dependency --body "$CHANGIE_BODY"
+          go tool changie new --kind Dependency --body "$CHANGIE_BODY"
 
       - name: Commit & Push changes
         if: >-
