@@ -5,6 +5,9 @@ on:
   schedule:
     - cron: "0 13 * * 1"  # 8am CT on Mondays
 
+permissions:
+  contents: read
+
 jobs:
   call-grype:
     uses: opslevel/actions/.github/workflows/grype.yml@main
