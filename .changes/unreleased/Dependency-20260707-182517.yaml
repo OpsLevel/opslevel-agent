@@ -1,3 +1,0 @@
-kind: Dependency
-body: Bump github.com/buger/jsonparser from v1.1.1 to v1.1.2 to fix CVE-2026-32285 (DoS vulnerability)
-time: 2026-07-07T18:25:17.428223-04:00
