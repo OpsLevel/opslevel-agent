@@ -1,0 +1,2 @@
+kind: Security
+body: Bumped `golang.org/x/crypto` from v0.37.0 to v0.53.0 to patch 10 critical CVEs in `x/crypto/ssh` (GHSA-vgwf-h737-ff37, GHSA-5cgq-3rg8-m6cv, GHSA-rm3j-f69w-wqmq, GHSA-x527-x647-q7gg, GHSA-89gr-r52h-f8rx, GHSA-jppx-rxg9-jmrx, GHSA-f5wc-c3c7-36mc, GO-2026-5005, GO-2026-5019, GO-2026-5020). Requires Go 1.25.0.
