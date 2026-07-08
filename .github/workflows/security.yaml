@@ -13,4 +13,6 @@ jobs:
     uses: opslevel/actions/.github/workflows/grype.yml@main
     with:
       alias: opslevel_agent
-    secrets: inherit
+    secrets:
+      ORG_GITHUB_TOKEN: ${{ secrets.ORG_GITHUB_TOKEN }}
+      GRYPE_INTEGRATION_SECRET: ${{ secrets.GRYPE_INTEGRATION_SECRET }}
