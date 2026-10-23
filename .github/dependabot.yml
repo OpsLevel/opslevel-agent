@@ -10,7 +10,7 @@ updates:
         patterns:
           - "k8s.io/*"
   - package-ecosystem: "gitsubmodule"
-    directory: "src/"
+    directory: "/"
     schedule:
       interval: "weekly"
       day: "friday"
