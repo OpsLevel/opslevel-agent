@@ -1,0 +1,2 @@
+kind: Security
+body: Bumped `golang.org/x/net` from v0.55.0 to v0.60.0 and the Go toolchain to 1.26.10 to patch the critical HTTP/2 double flow control refund vulnerability (GO-2026-6612, CVE-2026-78663) and the crypto/x509 compromised intermediate certificates issue (GO-2026-6809).

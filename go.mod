@@ -1,6 +1,6 @@
 module opslevel-agent
 
-go 1.25.0
+go 1.26.10
 
 require (
 	github.com/go-resty/resty/v2 v2.16.5
@@ -254,19 +254,19 @@ require (
 	go.uber.org/multierr v1.9.0 // indirect
 	go.uber.org/zap v1.24.0 // indirect
 	golang.org/x/arch v0.11.0 // indirect
-	golang.org/x/crypto v0.53.0 // indirect
+	golang.org/x/crypto v0.57.0 // indirect
 	golang.org/x/exp v0.0.0-20240909161429-701f63a606c0 // indirect
 	golang.org/x/exp/typeparams v0.0.0-20241108190413-2d47ceb2692f // indirect
-	golang.org/x/mod v0.36.0 // indirect
-	golang.org/x/net v0.55.0 // indirect
+	golang.org/x/mod v0.41.0 // indirect
+	golang.org/x/net v0.60.0 // indirect
 	golang.org/x/oauth2 v0.27.0 // indirect
-	golang.org/x/sync v0.21.0 // indirect
-	golang.org/x/sys v0.46.0 // indirect
-	golang.org/x/telemetry v0.0.0-20260508192327-42602be52be6 // indirect
-	golang.org/x/term v0.44.0 // indirect
-	golang.org/x/text v0.38.0 // indirect
+	golang.org/x/sync v0.23.0 // indirect
+	golang.org/x/sys v0.48.0 // indirect
+	golang.org/x/telemetry v0.0.0-20260811182544-a038080d80e5 // indirect
+	golang.org/x/term v0.46.0 // indirect
+	golang.org/x/text v0.42.0 // indirect
 	golang.org/x/time v0.9.0 // indirect
-	golang.org/x/tools v0.45.0 // indirect
+	golang.org/x/tools v0.49.0 // indirect
 	golang.org/x/tools/go/expect v0.1.1-deprecated // indirect
 	golang.org/x/tools/go/packages/packagestest v0.1.1-deprecated // indirect
 	google.golang.org/protobuf v1.36.5 // indirect
