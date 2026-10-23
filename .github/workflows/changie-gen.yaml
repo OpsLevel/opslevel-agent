@@ -8,52 +8,64 @@ on:
 
 jobs:
   generate-changelog:
+    # Privileged context (secrets available): only act on successful runs for
+    # Dependabot PRs opened from this repository, never forks.
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.actor.login == 'dependabot[bot]' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
     env:
       MAIN_BRANCH: ${{ github.event.workflow_run.pull_requests[0].base.ref }}
       PR_BRANCH: ${{ github.event.workflow_run.pull_requests[0].head.ref }}
     runs-on: ubuntu-latest
-    # NOTE: "github.event.workflow_run.conclusion" check needed within "steps"
+    # NOTE: nothing from the checked-out PR branch is ever executed (no go tool,
+    # no scripts); it is only treated as data to commit a changelog file onto.
     steps:
       - name: Checkout branch that Dependabot labeled
-        if: github.event.workflow_run.conclusion == 'success'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ env.PR_BRANCH }}
           token: ${{ secrets.ORG_GITHUB_TOKEN }}
+          # Full history so the merge base with MAIN_BRANCH can be found
+          fetch-depth: 0
 
       - name: Check if changelog file exists already
-        if: github.event.workflow_run.conclusion == 'success'
         shell: bash
         id: changelog_check
         run: |
-          git fetch origin ${{ env.MAIN_BRANCH }}
-          if [[ -n $(git diff --name-only main -- .changes/unreleased/*.yaml) ]]; then
-            echo "exists=true" >> $GITHUB_OUTPUT
+          git fetch origin "$MAIN_BRANCH"
+          # Three-dot diff: only fragments this PR added since branching, not ones merged to main since
+          if [[ -n $(git diff --name-only --diff-filter=A "origin/$MAIN_BRANCH"...HEAD -- '.changes/unreleased/*.yaml') ]]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
             echo "Changelog already exists for this PR, skip creating a new one"
           else
-            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "exists=false" >> "$GITHUB_OUTPUT"
             echo "No changelog exists for this PR, creating a new one"
           fi
 
       - name: Create changie log
-        if: >-
-          github.event.workflow_run.conclusion == 'success' &&
-          steps.changelog_check.outputs.exists == 'false'
+        if: steps.changelog_check.outputs.exists == 'false'
         env:
           CHANGIE_BODY: ${{ github.event.workflow_run.display_title }}
         shell: bash
         run: |
-          go tool changie new --kind Dependency --body "$CHANGIE_BODY"
+          # Write the changie fragment directly instead of running `go tool changie`,
+          # which would build a binary chosen by the PR's go.mod.
+          mkdir -p .changes/unreleased
+          body="${CHANGIE_BODY//\'/\'\'}"
+          {
+            echo "kind: Dependency"
+            echo "body: '${body}'"
+            echo "time: $(date -u +%Y-%m-%dT%H:%M:%S.%NZ)"
+          } > ".changes/unreleased/Dependency-$(date -u +%Y%m%d-%H%M%S).yaml"
 
       - name: Commit & Push changes
-        if: >-
-          github.event.workflow_run.conclusion == 'success' &&
-          steps.changelog_check.outputs.exists == 'false'
+        if: steps.changelog_check.outputs.exists == 'false'
         shell: bash
         run: |
           git config user.name "OpsLevel Bots"
           git config user.email "bots@opslevel.com"
           git pull
-          git add .
+          git add .changes/unreleased
           git commit -m "Add automated changelog yaml from template"
           git push
