@@ -5,7 +5,7 @@ go 1.26.10
 require (
 	github.com/go-resty/resty/v2 v2.16.5
 	github.com/opslevel/opslevel-go/v2025 v2025.12.17
-	github.com/rs/zerolog v1.34.0
+	github.com/rs/zerolog v1.35.1
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/viper v1.21.0
 	go.uber.org/automaxprocs v1.6.0
