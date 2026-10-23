@@ -1,2 +1,0 @@
-kind: Dependency
-body: Bumped `k8s.io/api`, `k8s.io/apimachinery` and `k8s.io/client-go` from v0.33.3 to v0.37.1 together, and grouped `k8s.io/*` updates in Dependabot so they are always bumped in lockstep.
