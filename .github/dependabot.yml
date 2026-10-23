@@ -4,6 +4,11 @@ updates:
     directory: "/" # Location of package manifests
     schedule:
       interval: "weekly"
+    groups:
+      # k8s.io/api, apimachinery and client-go must move in lockstep; bumping one alone breaks resolution
+      kubernetes:
+        patterns:
+          - "k8s.io/*"
   - package-ecosystem: "gitsubmodule"
     directory: "src/"
     schedule:
