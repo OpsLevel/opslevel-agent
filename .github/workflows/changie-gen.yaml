@@ -26,13 +26,16 @@ jobs:
         with:
           ref: ${{ env.PR_BRANCH }}
           token: ${{ secrets.ORG_GITHUB_TOKEN }}
+          # Full history so the merge base with MAIN_BRANCH can be found
+          fetch-depth: 0
 
       - name: Check if changelog file exists already
         shell: bash
         id: changelog_check
         run: |
           git fetch origin "$MAIN_BRANCH"
-          if [[ -n $(git diff --name-only "origin/$MAIN_BRANCH" -- '.changes/unreleased/*.yaml') ]]; then
+          # Three-dot diff: only fragments this PR added since branching, not ones merged to main since
+          if [[ -n $(git diff --name-only --diff-filter=A "origin/$MAIN_BRANCH"...HEAD -- '.changes/unreleased/*.yaml') ]]; then
             echo "exists=true" >> "$GITHUB_OUTPUT"
             echo "Changelog already exists for this PR, skip creating a new one"
           else
