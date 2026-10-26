@@ -1,2 +1,0 @@
-kind: Security
-body: Bumped the Alpine base image from 3.23.4 to 3.23.7, updating `ca-certificates-bundle` from 20260413 to 20261020 and removing the distrusted emSign C1, ECC G3 and ECC C3 roots.
